@@ -13,8 +13,10 @@
 #include <boost/preprocessor/seq/for_each.hpp>
 #include <boost/preprocessor/stringize.hpp>
 #include <boost/preprocessor/variadic/to_seq.hpp>
+#include <errno.h>
 #include <ranges>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <type_traits>

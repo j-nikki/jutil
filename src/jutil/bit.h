@@ -94,10 +94,14 @@ template <class T>
 //
 template <class T_, class T = std::remove_cvref_t<T_>>
     requires bit_castable<std::array<char, sizeof(T)>, T>
-JUTIL_CI void storeu(auto d_it, T_ &&val) noexcept
+JUTIL_CI void storeu(std::output_iterator<char> auto d_it, T_ &&val) noexcept
 {
-    const auto buf = std::bit_cast<std::array<char, sizeof(T)>>(val);
-    std::copy_n(buf.begin(), sizeof(T), d_it);
+    if consteval {
+        const auto buf = std::bit_cast<std::array<char, sizeof(T)>>(val);
+        std::copy_n(buf.begin(), sizeof(T), d_it);
+    } else {
+        memcpy(d_it, &val, sizeof(T));
+    }
 }
 
 //

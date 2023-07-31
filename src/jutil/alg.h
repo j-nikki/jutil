@@ -90,8 +90,11 @@ struct is_sized_span<std::span<T, N>> : std::bool_constant<N != std::dynamic_ext
 template <class T>
 concept constant_sized = (std::is_bounded_array_v<T> || is_sized_span<T>::value ||
                           requires { std::tuple_size<T>::value; });
-template <class T>
-concept constant_sized_input_range = sr::input_range<T> && constant_sized<std::remove_cvref_t<T>>;
+template <class R>
+concept constant_sized_input_range = sr::input_range<R> && constant_sized<std::remove_cvref_t<R>>;
+template <class R, class T>
+concept constant_sized_output_range =
+    sr::output_range<R, T> && constant_sized<std::remove_cvref_t<R>>;
 template <class T>
 concept borrowed_constant_sized_range =
     sr::borrowed_range<T> && constant_sized<std::remove_cvref_t<T>>;
@@ -105,20 +108,17 @@ template <class R, class T>
 concept sized_output_range = sr::output_range<R, T> && (requires(R r) { sr::size(r); });
 
 template <class T_>
-constexpr auto csr_sz() noexcept
-{
+constexpr inline std::size_t csr_sz = [] {
     using T = std::remove_cvref_t<T_>;
-    if constexpr (std::is_bounded_array_v<T>)
-        return []<class T, std::size_t N>(std::type_identity<T[N]>) {
-            return std::integral_constant<std::size_t, N>{};
-        }(std::type_identity<T>{});
-    else if constexpr (is_sized_span<T>::value)
+    if constexpr (std::is_bounded_array_v<T>) {
+        return std::extent_v<T>;
+    } else if constexpr (is_sized_span<T>::value)
         return []<class T, std::size_t N>(std::type_identity<std::span<T, N>>) {
-            return std::integral_constant<std::size_t, N>{};
+            return N;
         }(std::type_identity<T>{});
     else
-        return std::tuple_size<T>{};
-}
+        return std::tuple_size_v<T>;
+}();
 
 static_assert(constant_sized_input_range<const std::array<int, 1> &>);
 static_assert(constant_sized_input_range<const std::span<int, 1> &>);
