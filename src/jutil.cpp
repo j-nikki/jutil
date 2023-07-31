@@ -29,11 +29,11 @@ constexpr auto vec =
 template <char... Cs>
 constexpr auto setr_epi8 = std::bit_cast<__m512i>(std::array<char, 64>{Cs...});
 
-void b64_decode(const std::size_t n, const char *it, char *dit) noexcept
+void b64_decode(const char *f, const char *const l, char *dit) noexcept
 {
-    for (const auto l = it + n; it != l; it += 8, dit += 6) {
+    for (; f != l; f += 8, dit += 6) {
         JUTIL_dbge(printf("----\n"));
-        const auto xs = _mm512_set1_epi64(jutil::loadu<int64_t>(it));
+        const auto xs = _mm512_set1_epi64(jutil::loadu<int64_t>(f));
         JUTIL_dbge(puts("xs: "), print_bytes(xs));
 
         const auto sub = _mm512_sub_epi8(xs, vec<'A', 'a', '0', '+', '/', '-', '_'>);
