@@ -183,15 +183,15 @@ JUTIL_CI auto find_unrl(auto &r, auto it, const auto &x) noexcept(noexcept(*sr::
 template <borrowed_constant_sized_range R, class Pred>
 [[nodiscard]] JUTIL_CI sr::iterator_t<R>
 find_if_unrl(R &&r,
-             Pred pred) noexcept(noexcept(impl::find_if_unrl<csr_sz<R>()>(r, sr::begin(r), pred)))
+             Pred pred) noexcept(noexcept(impl::find_if_unrl<csr_sz<R>>(r, sr::begin(r), pred)))
 {
-    return impl::find_if_unrl<csr_sz<R>()>(r, sr::begin(r), pred);
+    return impl::find_if_unrl<csr_sz<R>>(r, sr::begin(r), pred);
 }
 template <borrowed_constant_sized_range R>
 [[nodiscard]] JUTIL_CI sr::iterator_t<R>
-find_unrl(R &&r, const auto &x) noexcept(noexcept(impl::find_unrl<csr_sz<R>()>(r, sr::begin(r), x)))
+find_unrl(R &&r, const auto &x) noexcept(noexcept(impl::find_unrl<csr_sz<R>>(r, sr::begin(r), x)))
 {
-    return impl::find_unrl<csr_sz<R>()>(r, sr::begin(r), x);
+    return impl::find_unrl<csr_sz<R>>(r, sr::begin(r), x);
 }
 template <borrowed_constant_sized_range R>
 [[nodiscard]] JUTIL_CI std::size_t
@@ -259,10 +259,10 @@ map_n(R &&r,
 }
 template <std::size_t Pad = 0, bool InitPad = true, constant_sized_input_range R>
 [[nodiscard]] JUTIL_CI auto
-map(R &&r, auto f) noexcept(noexcept(map_n<csr_sz<R>(), Pad, InitPad>(static_cast<R &&>(r), f)))
-    -> decltype(map_n<csr_sz<R>(), Pad, InitPad>(static_cast<R &&>(r), f))
+map(R &&r, auto f) noexcept(noexcept(map_n<csr_sz<R>, Pad, InitPad>(static_cast<R &&>(r), f)))
+    -> decltype(map_n<csr_sz<R>, Pad, InitPad>(static_cast<R &&>(r), f))
 {
-    return map_n<csr_sz<R>(), Pad, InitPad>(static_cast<R &&>(r), f);
+    return map_n<csr_sz<R>, Pad, InitPad>(static_cast<R &&>(r), f);
 }
 
 template <sr::range R, class InitT = sr::range_value_t<R>>
