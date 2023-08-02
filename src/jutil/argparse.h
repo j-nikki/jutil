@@ -69,39 +69,39 @@ struct argparse_t<Program, std::index_sequence<Is...>, command<Ss, Ls, Ns, Ds, F
     static JUTIL_CI int operator()(const int argc_, const char *const argv_[], F &&f_, G &&g_ = {})
     {
 #define JUTIL_ap_p(Capture, Static, F, G)                                                          \
-    return [RMPARENS Capture](const int argc, const char *const argv[])                            \
-        RMPARENS Static noexcept(noexcept(G(F(), std::span<const char *const>{})))                 \
-            __attribute__((optimize("-Os")))                                                       \
-                ->int                                                                              \
-    {                                                                                              \
-        int ret    = 0, i;                                                                         \
-        auto state = F();                                                                          \
-        for (i = 1; i < argc; ++i) {                                                               \
-            const char *arg = argv[i];                                                             \
-            if (*arg != '-') break;                                                                \
-            jutil::match<std::get<Is / 2 + Is % 2 * sizeof...(Ss)>(ss)...>(                        \
-                arg + 1, [&]<std::size_t I>(idxty<I>, auto) noexcept {                             \
-                    if constexpr (I == sizeof...(Is)) fputs(msg_e.data(), stderr), ret = 1;        \
-                    else {                                                                         \
-                        JUTIL_dbge(printf("match arg %zu\n", I / 2));                              \
-                        static constexpr auto s  = I % 2 == 0;                                     \
-                        using cmd                = nth_cmd<I / 2>;                                 \
-                        static constexpr auto &m = if_<s>(cmd::s, cmd::l);                         \
-                        const auto f = [&](auto... xs) { return cmd::fn(state, xs...); };          \
-                        if constexpr (cmd::n == help_narg) fputs(msg_h.data(), stderr), ret = 1;   \
-                        else if constexpr (cmd::n) {                                               \
-                            if constexpr (s) ret = f(arg + 1 + m.size());                          \
-                            else if (arg[m.size()] == '=') ret = f(arg + 1 + m.size() + 1);        \
-                            else ret = 1;                                                          \
-                        } else if (arg[m.size()]) ret = 1;                                         \
-                        else ret = f();                                                            \
-                    }                                                                              \
-                });                                                                                \
-            if (ret) return ret;                                                                   \
-        }                                                                                          \
-        return G(std::move(state), std::span<const char *const>{&argv[i], &argv[argc - i]});       \
-    }                                                                                              \
-    (argc_, argv_)
+    return                                                                                         \
+        [RMPARENS Capture](const int argc, const char *const argv[]) RMPARENS Static noexcept(     \
+            noexcept(G(                                                                            \
+                F(), std::span<const char *const>{}))) NDBGSTMNT(__attribute__((optimize("-Os")))) \
+            -> int {                                                                               \
+            int ret    = 0, i;                                                                     \
+            auto state = F();                                                                      \
+            for (i = 1; i < argc; ++i) {                                                           \
+                const char *arg = argv[i];                                                         \
+                if (*arg != '-') break;                                                            \
+                jutil::match<std::get<Is / 2 + Is % 2 * sizeof...(Ss)>(ss)...>(                    \
+                    arg + 1, [&]<std::size_t I>(idxty<I>, auto) noexcept {                         \
+                        if constexpr (I == sizeof...(Is)) fputs(msg_e.data(), stderr), ret = 1;    \
+                        else {                                                                     \
+                            JUTIL_dbge(printf("match arg %zu\n", I / 2));                          \
+                            static constexpr auto s  = I % 2 == 0;                                 \
+                            using cmd                = nth_cmd<I / 2>;                             \
+                            static constexpr auto &m = if_<s>(cmd::s, cmd::l);                     \
+                            const auto f = [&](auto... xs) { return cmd::fn(state, xs...); };      \
+                            if constexpr (cmd::n == help_narg)                                     \
+                                fputs(msg_h.data(), stderr), ret = 1;                              \
+                            else if constexpr (cmd::n) {                                           \
+                                if constexpr (s) ret = f(arg + 1 + m.size());                      \
+                                else if (arg[m.size()] == '=') ret = f(arg + 1 + m.size() + 1);    \
+                                else ret = 1;                                                      \
+                            } else if (arg[m.size()]) ret = 1;                                     \
+                            else ret = f();                                                        \
+                        }                                                                          \
+                    });                                                                            \
+                if (ret) return ret;                                                               \
+            }                                                                                      \
+            return G(std::move(state), std::span<const char *const>{&argv[i], &argv[argc - i]});   \
+        }(argc_, argv_)
         static constexpr auto fidc = std::is_default_constructible_v<F>;
         static constexpr auto gidc = std::is_default_constructible_v<G>;
         if constexpr (fidc && gidc) JUTIL_ap_p((), (static), F{}, G{});

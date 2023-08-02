@@ -144,6 +144,7 @@ JUTIL_CI std::conditional_t<F, T, U> &&if_(T &&t, U &&u) noexcept
 #ifndef NDEBUG
 #define DBGEXPR(...)  __VA_ARGS__
 #define DBGSTMNT(...) __VA_ARGS__
+#define NDBGSTMNT(...)
 #define JUTIL_c_u_impl(E, U, For, ...)                                                             \
     ([&]<class BOOST_PP_CAT(JaT, __LINE__)>(BOOST_PP_CAT(JaT, __LINE__) &&                         \
                                             BOOST_PP_CAT(jae, __LINE__))                           \
@@ -173,6 +174,7 @@ JUTIL_CI std::conditional_t<F, T, U> &&if_(T &&t, U &&u) noexcept
 #else
 #define DBGEXPR(...) ((void)0)
 #define DBGSTMNT(...)
+#define NDBGSTMNT(...) __VA_ARGS__
 #define JUTIL_c_impl(E, ...)                                                                       \
     [&]<class BOOST_PP_CAT(JaT, __LINE__)>(                                                        \
         BOOST_PP_CAT(JaT, __LINE__) && BOOST_PP_CAT(jae, __LINE__)) -> BOOST_PP_CAT(JaT,           \
