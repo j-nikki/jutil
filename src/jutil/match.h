@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bit.h"
 #include "data.h"
 #include "meta.h"
 
@@ -92,8 +93,7 @@ JUTIL_CI auto match_call(F &&f, I, J) noexcept(noexcept(f(I{}, J{})))
     } else if constexpr (std::is_void_v<decltype(f(I{}, J{}))>) {
         f(I{}, J{});
         return J::value;
-    } else
-        return f(I{}, J{});
+    } else return f(I{}, J{});
 }
 
 template <constant I, constant J, class F> // callable<J> F>
@@ -106,8 +106,7 @@ JUTIL_CI auto match_call(F &&f, I, J) noexcept(noexcept(f(J{})))
     } else if constexpr (std::is_void_v<decltype(f(J{}))>) {
         f(J{});
         return J::value;
-    } else
-        return f(J{});
+    } else return f(J{});
 }
 
 template <class J>
@@ -119,8 +118,7 @@ JUTIL_CI auto match_call(callable<std::size_t, decltype(J{} + 0)> auto &&f, std:
     if constexpr (std::is_void_v<decltype(f(i, j + 0))>) {
         f(i, j + 0);
         return j + 0;
-    } else
-        return f(i, j + 0);
+    } else return f(i, j + 0);
 }
 
 template <class J>
@@ -131,36 +129,31 @@ JUTIL_CI auto match_call(callable<decltype(J{} + 0)> auto &&f, std::size_t,
     if constexpr (std::is_void_v<decltype(f(j + 0))>) {
         f(j + 0);
         return j + 0;
-    } else
-        return f(j + 0);
+    } else return f(j + 0);
 }
 
-template <class F, string... Ss, std::size_t... Is, bool Use256 = (((Ss.size() + 1) + ...) <= 32),
+template <string... Ss, std::size_t... Is, bool Use256 = (((Ss.size() + 1) + ...) <= 32),
           class MaskTy = std::conditional_t<Use256, __mmask32, __mmask64>>
-JUTIL_CI auto match(std::index_sequence<Is...> &&, const char *const s) noexcept(
-    (noexcept(match_call(F{}, idxty<Is>{},
-                         meta::lift<static_cast<MaskTy>(match_idx<Ss...>[Is])>{})) &&
-     ... && match_call(F{}, idxty<sizeof...(Ss)>{}, meta::lift<MaskTy{0}>{})))
-    -> decltype(match_call(F{}, idxty<sizeof...(Is)>{}, meta::lift<MaskTy{0}>{}))
+JUTIL_CI auto match(std::index_sequence<Is...> &&, const char *const s, auto &&f) noexcept((
+    noexcept(match_call(f, idxty<Is>{}, meta::lift<static_cast<MaskTy>(match_idx<Ss...>[Is])>{})) &&
+    ... && noexcept(match_call(f, idxty<sizeof...(Ss)>{}, meta::lift<MaskTy{0}>{}))))
+    -> decltype(match_call(f, idxty<sizeof...(Ss)>{}, meta::lift<MaskTy{0}>{}))
 {
     static constexpr auto &idx = match_idx<Ss...>;
     if consteval {
         const auto fn = [&]<std::size_t I, string S, string... Ss_>(auto fn_) {
             if (std::equal(S.begin(), S.end(), s)) {
-                return match_call(F{}, idxty<I>{},
+                return match_call(f, idxty<I>{},
                                   meta::lift<static_cast<MaskTy>(idxty<idx[I]>{})>{});
             } else if constexpr (!sizeof...(Ss_)) {
-                return match_call(F{}, idxty<I>{}, meta::lift<MaskTy{0}>{});
-            } else
-                return fn_.template operator()<I + 1, Ss_...>(fn_);
+                return match_call(f, idxty<I>{}, meta::lift<MaskTy{0}>{});
+            } else return fn_.template operator()<I + 1, Ss_...>(fn_);
         };
         return fn.template operator()<0, Ss...>(fn);
     } else {
         const auto load = [&] noexcept [[gnu::always_inline]] {
-            if constexpr (Use256)
-                return _mm256_broadcastsi128_si256(_mm_loadu_epi8(s));
-            else
-                return _mm512_broadcast_i64x2(_mm_loadu_epi8(s));
+            if constexpr (Use256) return _mm256_broadcastsi128_si256(_mm_loadu_epi8(s));
+            else return _mm512_broadcast_i64x2(_mm_loadu_epi8(s));
         }();
 
         static constexpr auto msuf = [] {
@@ -195,9 +188,10 @@ JUTIL_CI auto match(std::index_sequence<Is...> &&, const char *const s) noexcept
             return res;
         }(std::make_index_sequence<sizeof(cmp) * 8>{});
         JUTIL_dbge(puts("sub:"), print_bits(cmp), print_bits(bsub));
-        const MaskTy sub             = cmp - bsub;
+        const MaskTy sub = cmp - bsub;
 
-        static constexpr MaskTy band = ~bsub & ((decltype(bsub){1} << ((Ss.size() + 1) + ...)) - 1);
+        static constexpr MaskTy band =
+            ~bsub & (~(decltype(bsub){0} >> (sizeof(bsub) * 8 - ((Ss.size() + 1) + ...))));
         JUTIL_dbge(puts("and:"), print_bits(sub), print_bits(band));
         const MaskTy and_ = sub & band;
 
@@ -207,13 +201,13 @@ JUTIL_CI auto match(std::index_sequence<Is...> &&, const char *const s) noexcept
                 printf("%zu. ", i + 1), print_bits(static_cast<MaskTy>(y));
         }());
 
-        if constexpr (std::is_invocable_v<F &&, MaskTy>) {
-            return match_call(F{}, -1uz, and_);
+        if constexpr (requires { match_call(f, -1uz, and_); }) {
+            return match_call(f, -1uz, and_);
         } else {
-            return meta::visit<meta::lifts<0uz, idx[Is]...>>(
-                and_, []<class T>(auto i) static noexcept [[gnu::always_inline]] {
+            return meta::visit<meta::lifts<idx[Is]..., 0uz>>(
+                and_, [&]<class T>(auto i) noexcept [[gnu::always_inline]] {
                     JUTIL_dbge(print_bits(T::value));
-                    return match_call(F{}, i, meta::lift<T::value>{});
+                    return match_call(f, i, meta::lift<T::value>{});
                 });
         }
     }
@@ -233,11 +227,12 @@ JUTIL_CI auto match(std::index_sequence<Is...> &&, const char *const s) noexcept
  */
 template <string... Ss, class F>
     requires(((Ss.size() + 1) + ...) < 64)
-JUTIL_CI auto match(const char *const s, [[maybe_unused]] F &&_f) noexcept(
-    noexcept(detail::match<F, Ss...>(std::make_index_sequence<sizeof...(Ss)>{}, s)))
-    -> decltype(detail::match<F, Ss...>(std::make_index_sequence<sizeof...(Ss)>{}, s))
+JUTIL_CI auto match(const char *const s, F &&f) noexcept(noexcept(
+    detail::match<Ss...>(std::make_index_sequence<sizeof...(Ss)>{}, s, static_cast<F &&>(f))))
+    -> decltype(detail::match<Ss...>(std::make_index_sequence<sizeof...(Ss)>{}, s,
+                                     static_cast<F &&>(f)))
 {
-    return detail::match<F, Ss...>(std::make_index_sequence<sizeof...(Ss)>{}, s);
+    return detail::match<Ss...>(std::make_index_sequence<sizeof...(Ss)>{}, s, static_cast<F &&>(f));
 }
 
 /**

@@ -12,6 +12,7 @@ IfMacros: ['FOR_CO_AWAIT', 'JUTIL_IF_CONSTEVAL']
 AlignConsecutiveMacros: AcrossEmptyLinesAndComments
 AllowShortCaseLabelsOnASingleLine: true
 BreakBeforeBraces: Custom
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 BraceWrapping:
   AfterFunction: true
   AfterNamespace: true

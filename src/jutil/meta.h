@@ -26,7 +26,7 @@ struct with_t {
     }
 };
 template <class... Ts>
-static constexpr inline with_t<Ts...> with;
+constexpr inline with_t<Ts...> with;
 
 template <class>
 struct apply_t;
@@ -41,7 +41,7 @@ struct apply_t<T<Us...>> {
     }
 };
 template <class T>
-static constexpr inline apply_t<T> apply;
+constexpr inline apply_t<T> apply;
 
 template <template <class...> class, class>
 struct rename_t;
@@ -86,7 +86,7 @@ struct any_t<std::index_sequence<Is...>, T<Us...>> {
     }
 };
 template <class T>
-static constexpr inline any_t<rename<std::index_sequence_for, T>, T> any;
+constexpr inline any_t<rename<std::index_sequence_for, T>, T> any;
 
 template <auto X>
 struct lift : std::integral_constant<decltype(X), X> {};
@@ -123,7 +123,7 @@ struct visit_t<std::index_sequence<Is...>, T<Us...>> {
         switch (I) {
 #define JUTIL_mvc(X)                                                                               \
     case nth_<X>::value + (X < sizeof...(Us) ? 0 : X):                                             \
-        if constexpr (X == sizeof...(Us))                                                          \
+        if constexpr (X >= sizeof...(Us))                                                          \
             JUTIL_UNREACHABLE();                                                                   \
         else return f.template operator()<nth_<X>>(idxty<X>{});
             // clang-format off
@@ -134,5 +134,5 @@ struct visit_t<std::index_sequence<Is...>, T<Us...>> {
     }
 };
 template <class T>
-static constexpr inline visit_t<rename<std::index_sequence_for, T>, T> visit;
+constexpr inline visit_t<rename<std::index_sequence_for, T>, T> visit;
 } // namespace jutil::meta

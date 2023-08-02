@@ -116,8 +116,7 @@ constexpr inline std::size_t csr_sz = [] {
         return []<class T, std::size_t N>(std::type_identity<std::span<T, N>>) {
             return N;
         }(std::type_identity<T>{});
-    else
-        return std::tuple_size_v<T>;
+    else return std::tuple_size_v<T>;
 }();
 
 static_assert(constant_sized_input_range<const std::array<int, 1> &>);
@@ -162,22 +161,16 @@ namespace impl
 template <std::size_t I>
 JUTIL_CI auto find_if_unrl(auto &r, auto it, auto pred) noexcept(noexcept(pred(*sr::next(it))))
 {
-    if constexpr (!I)
-        return sr::end(r);
-    else if (pred(*it))
-        return it;
-    else
-        return find_if_unrl<I - 1>(r, sr::next(it), pred);
+    if constexpr (!I) return sr::end(r);
+    else if (pred(*it)) return it;
+    else return find_if_unrl<I - 1>(r, sr::next(it), pred);
 }
 template <std::size_t I>
 JUTIL_CI auto find_unrl(auto &r, auto it, const auto &x) noexcept(noexcept(*sr::next(it) == x))
 {
-    if constexpr (!I)
-        return sr::end(r);
-    else if (*it == x)
-        return it;
-    else
-        return find_unrl<I - 1>(r, sr::next(it), x);
+    if constexpr (!I) return sr::end(r);
+    else if (*it == x) return it;
+    else return find_unrl<I - 1>(r, sr::next(it), x);
 }
 } // namespace impl
 template <borrowed_constant_sized_range R, class Pred>
@@ -349,10 +342,8 @@ push_heap(I f, S l, Comp comp = {}, Proj proj = {},
 {
     auto xi = (l - f) - 1;
     for (auto upi = xi / 2;; (xi = upi, upi = xi / 2))
-        if (!xi || comp(proj(f[xi]), proj(f[upi])))
-            return f + xi;
-        else
-            is(f + upi, f + xi);
+        if (!xi || comp(proj(f[xi]), proj(f[upi]))) return f + xi;
+        else is(f + upi, f + xi);
 }
 
 //

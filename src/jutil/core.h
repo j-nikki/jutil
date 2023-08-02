@@ -52,18 +52,14 @@ concept opaque_castable = static_castable<From, To> || bit_castable<From, To>;
 template <class To, class From>
 constexpr To opaque_cast(From &&x) noexcept
 {
-    if constexpr (static_castable<From, To>)
-        return static_cast<To>(static_cast<From &&>(x));
-    else
-        return std::bit_cast<To>(static_cast<From &&>(x));
+    if constexpr (static_castable<From, To>) return static_cast<To>(static_cast<From &&>(x));
+    else return std::bit_cast<To>(static_cast<From &&>(x));
 }
 template <class To, opaque_castable<To> From>
 constexpr To opaque_cast(From &x) noexcept
 {
-    if constexpr (static_castable<From, To>)
-        return static_cast<To>(x);
-    else
-        return std::bit_cast<To>(x);
+    if constexpr (static_castable<From, To>) return static_cast<To>(x);
+    else return std::bit_cast<To>(x);
 }
 template <class T>
 using opaque = std::aligned_storage_t<sizeof(T), alignof(T)>;
@@ -337,6 +333,48 @@ template <std::size_t N, class T, std::size_t M>
 }
 
 //
+// append
+//
+template <auto... Xs>
+struct append_t {
+    template <class T, std::size_t N>
+    [[nodiscard]] static JUTIL_CI
+        std::array<std::common_type_t<T, decltype(Xs)...>, N + sizeof...(Xs)>
+        operator()(const std::array<T, N> &arr) noexcept
+    {
+        std::array<std::common_type_t<T, decltype(Xs)...>, N + sizeof...(Xs)> res{};
+        auto it = res.begin();
+        for (const T &x : arr)
+            *it++ = x;
+        ((*it++ = Xs), ...);
+        return res;
+    }
+};
+template <auto... Xs>
+constexpr inline append_t<Xs...> append;
+
+//
+// prepend
+//
+template <auto... Xs>
+struct prepend_t {
+    template <class T, std::size_t N>
+    [[nodiscard]] static JUTIL_CI
+        std::array<std::common_type_t<T, decltype(Xs)...>, N + sizeof...(Xs)>
+        operator()(const std::array<T, N> &arr) noexcept
+    {
+        std::array<std::common_type_t<T, decltype(Xs)...>, N + sizeof...(Xs)> res{};
+        auto it = res.begin();
+        ((*it++ = Xs), ...);
+        for (const T &x : arr)
+            *it++ = x;
+        return res;
+    }
+};
+template <auto... Xs>
+constexpr inline prepend_t<Xs...> prepend;
+
+//
 // take
 //
 template <std::ptrdiff_t N, class T, std::size_t M>
@@ -463,9 +501,12 @@ struct string;
 template <std::size_t... Is, std::size_t N>
 struct string<std::index_sequence<Is...>, N> : std::array<char, N> {
     consteval string(const char (&cs)[N + 1]) noexcept : std::array<char, N>{cs[Is]...} {}
+    consteval string(const std::array<char, N> &cs) noexcept : std::array<char, N>{cs[Is]...} {}
 };
 template <std::size_t N>
 string(const char (&cs)[N]) -> string<std::make_index_sequence<N - 1>, N - 1>;
+template <std::size_t N>
+string(const std::array<char, N> &arr) -> string<std::make_index_sequence<N>, N>;
 
 //
 // IF
@@ -478,8 +519,7 @@ string(const char (&cs)[N]) -> string<std::make_index_sequence<N - 1>, N - 1>;
         [[maybe_unused]] BOOST_PP_CAT(IfF, __LINE__) && BOOST_PP_CAT(iff, __LINE__)) {             \
         if constexpr (BOOST_PP_CAT(ife, __LINE__))                                                 \
             return static_cast<BOOST_PP_CAT(IfT, __LINE__) &&>(BOOST_PP_CAT(ift, __LINE__));       \
-        else                                                                                       \
-            return static_cast<BOOST_PP_CAT(IfF, __LINE__) &&>(BOOST_PP_CAT(iff, __LINE__));       \
+        else return static_cast<BOOST_PP_CAT(IfF, __LINE__) &&>(BOOST_PP_CAT(iff, __LINE__));      \
     }(std::bool_constant<E>{}, T, F)
 
 //
