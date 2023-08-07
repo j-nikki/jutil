@@ -29,6 +29,12 @@ constexpr auto vec =
 template <char... Cs>
 constexpr auto setr_epi8 = std::bit_cast<__m512i>(std::array<char, 64>{Cs...});
 
+template <string S>
+constexpr auto operator""_v() noexcept
+{
+    return std::bit_cast<__m512i>(S);
+}
+
 void b64_decode(const char *f, const char *const l, char *dit) noexcept
 {
     for (; f != l; f += 8, dit += 6) {
@@ -57,6 +63,32 @@ void b64_decode(const char *f, const char *const l, char *dit) noexcept
                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>);
         JUTIL_dbge(puts("bs: "), print_bits(bs));
         storeu(dit, bs);
+    }
+}
+
+void b64_encode(const char *f, const char *const l, char *dit) noexcept
+{
+    for (; f != l; f += 6, dit += 8) {
+        JUTIL_dbge(printf("----\n"));
+        const auto sa = _mm512_set1_epi64(jutil::loadu<int64_t>(f));
+        JUTIL_dbge(puts("sa: "), print_bytes(sa));
+        const auto suf =
+            _mm512_bitshuffle_epi64_mask(sa, setr_epi8<002, 003, 004, 005, 006, 007, 0, 0, //
+                                                       014, 015, 016, 017, 000, 001, 0, 0, //
+                                                       026, 027, 010, 011, 012, 013, 0, 0, //
+                                                       020, 021, 022, 023, 024, 025, 0, 0, //
+                                                       032, 033, 034, 035, 036, 037, 0, 0, //
+                                                       044, 045, 046, 047, 030, 031, 0, 0, //
+                                                       056, 057, 040, 041, 042, 043, 0, 0, //
+                                                       050, 051, 052, 053, 054, 055, 0, 0>);
+        JUTIL_dbge(puts("suf: "), print_bits(suf));
+        const auto pa = _mm512_set1_epi64(suf);
+        const auto p  = _mm512_permutexvar_epi8(
+            pa, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"_v);
+        JUTIL_dbge(puts("p: "), print_bytes(p));
+        const auto cvt = _mm512_cvtsd_f64((__m512d)p);
+        JUTIL_dbge(puts("cvt: "), print_bytes(suf));
+        storeu(dit, cvt);
     }
 }
 } // namespace jutil::detail

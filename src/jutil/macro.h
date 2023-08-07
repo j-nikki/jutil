@@ -1,10 +1,9 @@
 #pragma once
 
-#include "core.h"
-
-#define INLINE               JUTIL_INLINE
-#define PARENS               ()
-#define RMPARENS(X)          X
+#define PARENS               _PARENS
+#define _PARENS              ()
+#define RMPARENS(X)          _RMPARENS(X)
+#define _RMPARENS(X)         X
 #define ID(...)              __VA_ARGS__
 
 #define EXP(...)             _EXP1(_EXP1(_EXP1(_EXP1(__VA_ARGS__))))
@@ -38,6 +37,7 @@
 #define FST(X, ...)    X
 #define SND(X, Y, ...) Y
 #define TAIL(X, ...)   __VA_ARGS__
+#define WCOMMA(...)    __VA_OPT__(, __VA_ARGS__)
 
 #define CAT(X, Y)      _CAT(X, Y)
 #define _CAT(X, Y)     X##Y

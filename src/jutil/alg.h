@@ -19,30 +19,42 @@ namespace sv = std::views;
 // call
 //
 template <callable<> F>
-constexpr call_result<F &>
+JUTIL_CI call_result<F &>
 call_until(F &&f, std::predicate<call_result<F &>> auto pr) noexcept(noexcept(pr(f())))
 {
     for (;;)
         if (decltype(auto) res = f(); pr(res)) return static_cast<decltype(res)>(res);
 }
 template <callable<> F>
-constexpr call_result<F &>
+JUTIL_CI call_result<F &>
 call_while(F &&f, std::predicate<call_result<F &>> auto pr) noexcept(noexcept(pr(f())))
 {
     for (;;)
         if (decltype(auto) res = f(); !pr(res)) return static_cast<decltype(res)>(res);
 }
 template <callable<> F>
-constexpr void call_n(F &&f, std::integral auto n) noexcept(noexcept(f()))
+JUTIL_CI void call_n(F &&f, std::integral auto n) noexcept(noexcept(f()))
 {
     while (n--)
         f();
 }
 template <sr::input_range R, callable<sr::range_value_t<R>> F>
-constexpr void call_with(F &&f, R &&r) noexcept(noexcept(f(*sr::begin(r))))
+JUTIL_CI void call_with(F &&f, R &&r) noexcept(noexcept(f(*sr::begin(r))))
 {
     for (auto &&x : static_cast<R &&>(r))
         f(static_cast<decltype(x) &&>(x));
+}
+JUTIL_CI void
+call_join(callable_r<bool> auto &&pr, callable<> auto &&f,
+          callable<> auto &&j) noexcept(noexcept(pr()) && noexcept(f()) && noexcept(j()))
+{
+    if (pr()) {
+        for (;;) {
+            f();
+            if (pr()) j();
+            else break;
+        }
+    }
 }
 
 //
@@ -81,31 +93,6 @@ JUTIL_CI std::size_t operator""_uz(unsigned long long int x) noexcept
 {
     return static_cast<std::size_t>(x);
 }
-
-template <class>
-struct is_sized_span : std::false_type {};
-template <class T, std::size_t N>
-struct is_sized_span<std::span<T, N>> : std::bool_constant<N != std::dynamic_extent> {};
-
-template <class T>
-concept constant_sized = (std::is_bounded_array_v<T> || is_sized_span<T>::value ||
-                          requires { std::tuple_size<T>::value; });
-template <class R>
-concept constant_sized_input_range = sr::input_range<R> && constant_sized<std::remove_cvref_t<R>>;
-template <class R, class T>
-concept constant_sized_output_range =
-    sr::output_range<R, T> && constant_sized<std::remove_cvref_t<R>>;
-template <class T>
-concept borrowed_constant_sized_range =
-    sr::borrowed_range<T> && constant_sized<std::remove_cvref_t<T>>;
-template <class T>
-concept borrowed_input_range = sr::borrowed_range<T> && sr::input_range<T>;
-template <class T>
-concept sized_input_range = sr::input_range<T> && (requires(T r) { sr::size(r); });
-template <class T>
-concept sized_contiguous_range = sr::contiguous_range<T> && (requires(T r) { sr::size(r); });
-template <class R, class T>
-concept sized_output_range = sr::output_range<R, T> && (requires(R r) { sr::size(r); });
 
 template <class T_>
 constexpr inline std::size_t csr_sz = [] {

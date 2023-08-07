@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <boost/mp11/algorithm.hpp>
 #include <concepts>
 #include <ranges>
 
@@ -9,7 +8,6 @@
 
 namespace jutil
 {
-namespace mp = boost::mp11;
 namespace sr = std::ranges;
 //
 // pair
@@ -59,8 +57,8 @@ struct tuple_element;
             : X{static_cast<U &&>(x_)}                                                             \
         {                                                                                          \
         }                                                                                          \
-        JUTIL_CI T &at(idxty<I>) noexcept { return X; }                                            \
-        JUTIL_CI const T &at(idxty<I>) const noexcept { return X; }                                \
+        JUTIL_CI T &At(idxty<I>) noexcept { return X; }                                            \
+        JUTIL_CI const T &At(idxty<I>) const noexcept { return X; }                                \
     }
 // clang-format off
 JUTIL_tel(0, a); JUTIL_tel(1, b); JUTIL_tel(2, c); JUTIL_tel(3, d); JUTIL_tel(4, e); JUTIL_tel(5, f); JUTIL_tel(6, g); JUTIL_tel(7, h); JUTIL_tel(8, i); JUTIL_tel(9, j); JUTIL_tel(10, k); JUTIL_tel(11, l); JUTIL_tel(12, m); JUTIL_tel(13, n); JUTIL_tel(14, o); JUTIL_tel(15, p); JUTIL_tel(16, q); JUTIL_tel(17, r); JUTIL_tel(18, s); JUTIL_tel(19, t); JUTIL_tel(20, u); JUTIL_tel(21, v); JUTIL_tel(22, w); JUTIL_tel(23, x); JUTIL_tel(24, y); JUTIL_tel(25, z);
@@ -89,8 +87,7 @@ struct tuple_info<std::index_sequence<Is...>, Ts...> {
     template <std::size_t I>
     using nthty = std::tuple_element_t<I, std::tuple<Ts...>>;
     template <std::size_t I>
-    using elemty = tuple_element<I, nthty<I>>;
-    using cmpcat = std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>;
+    using elemty = tuple_element<I, nthty<idx[I]>>;
     struct tuple : elemty<idx[Is]>... {
         //
         // constructors
@@ -109,16 +106,16 @@ struct tuple_info<std::index_sequence<Is...>, Ts...> {
         //
         // member access
         //
-        using elemty<Is>::at...;
+        using elemty<Is>::At...;
         template <std::size_t I>
         JUTIL_CI nthty<I> &get() noexcept
         {
-            return at(idxty<I>{});
+            return At(idxty<map[I]>{});
         }
         template <std::size_t I>
         JUTIL_CI const nthty<I> &get() const noexcept
         {
-            return at(idxty<I>{});
+            return At(idxty<map[I]>{});
         }
         template <std::size_t I>
         JUTIL_CI nthty<I> &operator[](idxty<I>) noexcept
@@ -134,13 +131,15 @@ struct tuple_info<std::index_sequence<Is...>, Ts...> {
         //
         // comparison
         //
-        friend JUTIL_CI cmpcat operator<=>(const tuple &lhs, const tuple &rhs) noexcept
+        friend JUTIL_CI auto operator<=>(const tuple &lhs, const tuple &rhs) noexcept
+            // -> std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...>
             requires(std::three_way_comparable<Ts> && ...)
         {
-            const auto f = [&](auto f_, auto i) -> cmpcat {
+            const auto f = [&](auto f_, auto i)
+                -> std::common_comparison_category_t<std::compare_three_way_result_t<Ts>...> {
                 if constexpr (i == sizeof...(Ts) - 1) {
-                    return lhs.at(i) <=> rhs.at(i);
-                } else if (auto c = lhs.at(i) <=> rhs.at(i); c != 0) {
+                    return lhs.At(i) <=> rhs.At(i);
+                } else if (auto c = lhs.At(i) <=> rhs.At(i); c != 0) {
                     return c;
                 } else {
                     return f_(f_, idxty<i + 1>{});
@@ -156,7 +155,7 @@ struct tuple_info<std::index_sequence<Is...>, Ts...> {
             requires(std::is_nothrow_swappable_v<Ts> && ...)
         {
             using std::swap;
-            ((swap(lhs.at(idxty<Is>{}), rhs.at(idxty<Is>{})), ...));
+            ((swap(lhs.At(idxty<Is>{}), rhs.At(idxty<Is>{})), ...));
         }
     };
 };
