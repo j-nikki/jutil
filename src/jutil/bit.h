@@ -74,8 +74,7 @@ VECINS(512)
 //
 // load
 //
-template <class T>
-    requires bit_castable<T, std::array<char, sizeof(T)>>
+template <trivially_copyable T>
 [[nodiscard]] JUTIL_CI T loadu(const char *p) noexcept
 {
     if consteval {
@@ -92,16 +91,16 @@ template <class T>
 //
 // store
 //
-template <class T_, class T = std::remove_cvref_t<T_>>
-    requires bit_castable<std::array<char, sizeof(T)>, T>
-JUTIL_CI void storeu(std::output_iterator<char> auto d_it, T_ &&val) noexcept
+template <contiguous_output_iterator<char> O>
+JUTIL_CI O storeu(const trivially_copyable auto &x, O d_it) noexcept
 {
     if consteval {
-        const auto buf = std::bit_cast<std::array<char, sizeof(T)>>(val);
-        std::copy_n(buf.begin(), sizeof(T), d_it);
+        const auto buf = std::bit_cast<std::array<char, sizeof(x)>>(x);
+        std::copy_n(buf.begin(), sizeof(x), d_it);
     } else {
-        memcpy(d_it, &val, sizeof(T));
+        memcpy(d_it, std::addressof(x), sizeof(x));
     }
+    return d_it + sizeof(x);
 }
 
 //

@@ -334,6 +334,21 @@ push_heap(I f, S l, Comp comp = {}, Proj proj = {},
 }
 
 //
+// to_chars_r
+//
+template <std::integral T, std::output_iterator<char> O>
+JUTIL_CI O to_chars_r(T x, O o) noexcept
+{
+    bool neg = false;
+    if (std::is_signed_v<T> && (neg = x < 0)) x = -x;
+    do {
+        *o++ = '0' + x % 10;
+    } while ((x /= 10));
+    if (neg) *o++ = '-';
+    return std::move(o);
+}
+
+//
 // eytzinger-indexed heap
 //
 template <class IdxTy = std::size_t, std::random_access_iterator I, std::sentinel_for<I> S,

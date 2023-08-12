@@ -23,8 +23,7 @@ void fprint_bits(FILE *const f, const char *const p, const std::size_t n) noexce
 }
 
 template <char... Cs>
-constexpr auto vec =
-    std::bit_cast<__m512i>(std::array<uint64_t, 8>{(Cs * 0x1010101'01010101l)..., 0l});
+constexpr auto vec = std::bit_cast<__m512i>(std::array<uint64_t, 8>{(Cs * 0x1010101'01010101l)...});
 
 template <char... Cs>
 constexpr auto setr_epi8 = std::bit_cast<__m512i>(std::array<char, 64>{Cs...});
@@ -42,12 +41,12 @@ void b64_decode(const char *f, const char *const l, char *dit) noexcept
         const auto xs = _mm512_set1_epi64(jutil::loadu<int64_t>(f));
         JUTIL_dbge(puts("xs: "), print_bytes(xs));
 
-        const auto sub = _mm512_sub_epi8(xs, vec<'A', 'a', '0', '+', '/', '-', '_'>);
+        const auto sub = _mm512_sub_epi8(xs, vec<'A', 'a', '0', '+', '/', '-', '_', '='>);
         JUTIL_dbge(puts("sub: "), print_bytes(sub));
-        const auto lt = _mm512_cmplt_epu8_mask(sub, vec<26, 26, 10, 1, 1, 1, 1>);
+        const auto lt = _mm512_cmplt_epu8_mask(sub, vec<26, 26, 10, 1, 1, 1, 1, 1>);
         JUTIL_dbge(puts("lt: "), print_bits(lt));
 
-        const auto add = _mm512_maskz_add_epi8(lt, sub, vec<0, 26, 52, 62, 63, 62, 63>);
+        const auto add = _mm512_maskz_add_epi8(lt, sub, vec<0, 26, 52, 62, 63, 62, 63, 0>);
         JUTIL_dbge(puts("add: "), print_bytes(add));
         const auto or_ = _mm512_reduce_or_epi64(add);
         JUTIL_dbge(puts("or: "), print_bits(or_));
@@ -62,7 +61,7 @@ void b64_decode(const char *f, const char *const l, char *dit) noexcept
                           070, 071, 072, 073, 074, 075, 060, 061, //
                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>);
         JUTIL_dbge(puts("bs: "), print_bits(bs));
-        storeu(dit, bs);
+        storeu(bs, dit);
     }
 }
 
@@ -88,7 +87,7 @@ void b64_encode(const char *f, const char *const l, char *dit) noexcept
         JUTIL_dbge(puts("p: "), print_bytes(p));
         const auto cvt = _mm512_cvtsd_f64((__m512d)p);
         JUTIL_dbge(puts("cvt: "), print_bytes(suf));
-        storeu(dit, cvt);
+        storeu(cvt, dit);
     }
 }
 } // namespace jutil::detail

@@ -47,9 +47,11 @@ concept constant = requires(std::remove_cvref_t<T> &x) {
 
 template <class From, class To>
 concept static_castable = requires(From &&x) { static_cast<To>(static_cast<From &&>(x)); };
+template <class T>
+concept trivially_copyable = std::is_trivially_copyable_v<T>;
 template <class From, class To>
-concept bit_castable = sizeof(To) == sizeof(From) and std::is_trivially_copyable_v<To> and
-                       std::is_trivially_copyable_v<From>;
+concept bit_castable =
+    sizeof(To) == sizeof(From) and trivially_copyable<To> and trivially_copyable<From>;
 template <class From, class To>
 concept opaque_castable = static_castable<From, To> || bit_castable<From, To>;
 template <class To, class From>
@@ -89,13 +91,18 @@ concept borrowed_constant_sized_range =
 template <class T>
 concept borrowed_input_range = sr::borrowed_range<T> && sr::input_range<T>;
 template <class T>
-concept sized_input_range = sr::input_range<T> && (requires(T r) { sr::size(r); });
+concept sized_input_range = sr::input_range<T> && sr::sized_range<T>;
 template <class T>
-concept sized_contiguous_range = sr::contiguous_range<T> && (requires(T r) { sr::size(r); });
+concept sized_contiguous_range = sr::contiguous_range<T> && sr::sized_range<T>;
 template <class R, class T>
-concept sized_output_range = sr::output_range<R, T> && (requires(R r) { sr::size(r); });
+concept sized_output_range = sr::output_range<R, T> && sr::sized_range<T>;
 template <class R, class T>
 concept contiguous_output_range = sr::output_range<R, T> && sr::contiguous_range<R>;
+template <class I, class T>
+concept contiguous_output_iterator = std::output_iterator<I, T> && std::contiguous_iterator<I>;
+template <class R, class T>
+concept sized_contiguous_output_range =
+    sr::sized_range<R> && sr::output_range<R, T> && sr::contiguous_range<R>;
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -177,6 +184,9 @@ JUTIL_CI std::conditional_t<F, T, U> &&if_(T &&t, U &&u) noexcept
 #define JUTIL_dbge(...) (void)0
 #endif
 
+#define ERRFMT ""
+#define ERRARGS(...)
+
 #ifndef NDEBUG
 #define JUTIL_c_u_impl(E, U, For, ...)                                                             \
     ([&]<class CAT(JaT, __LINE__)>(CAT(JaT, __LINE__) && CAT(jae, __LINE__))                       \
@@ -187,16 +197,20 @@ JUTIL_CI std::conditional_t<F, T, U> &&if_(T &&t, U &&u) noexcept
                     stderr,                                                                        \
                     "\033[2m" __FILE__ ":" STR(                                                    \
                         __LINE__) ":\033[0m assertion failed: \033[1m%s \033[2m(%#jx)\033[0;1m "   \
-                                  "%s\033[0m" BOOST_PP_IF(U, ": %s \033[2m(%#x)\033[0m", "") "\n", \
+                                  "%s\033[0m" BOOST_PP_IF(U, ": %s \033[2m(%#x)\033[0m", "")       \
+                                      ERRFMT "\n",                                                 \
                     (__VA_OPT__((void)) #E __VA_OPT__(, __VA_ARGS__)),                             \
                     jutil::opaque_cast<uintmax_t>(CAT(jae, __LINE__)),                             \
                     #For BOOST_PP_COMMA_IF(U)                                                      \
-                        BOOST_PP_REMOVE_PARENS(BOOST_PP_IIF(U, (strerror(errno), errno), ())));    \
+                        BOOST_PP_REMOVE_PARENS(BOOST_PP_IIF(U, (strerror(errno), errno), ()))      \
+                            ERRARGS(CAT(jae, __LINE__)));                                          \
             else                                                                                   \
                 fprintf(stderr,                                                                    \
                         "\033[2m" __FILE__                                                         \
-                        ":" STR(__LINE__) ":\033[0m assertion failed: \033[1m%s %s\033[0m\n",      \
-                        (__VA_OPT__((void)) #E __VA_OPT__(, __VA_ARGS__)), #For);                  \
+                        ":" STR(__LINE__) ":\033[0m assertion failed: \033[1m%s %s\033[0m" ERRFMT  \
+                                          "\n",                                                    \
+                        (__VA_OPT__((void)) #E __VA_OPT__(, __VA_ARGS__)),                         \
+                        #For ERRARGS(CAT(jae, __LINE__)));                                         \
             JUTIL_TRAP();                                                                          \
         }                                                                                          \
         return CAT(jae, __LINE__);                                                                 \
