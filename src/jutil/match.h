@@ -9,10 +9,13 @@ namespace jutil
 struct string_view {
     char *p;
     std::size_t n;
-    JUTIL_CI char *begin() noexcept { return p; }
-    JUTIL_CI char *end() noexcept { return p + n; }
-    JUTIL_CI const char *begin() const noexcept { return p; }
-    JUTIL_CI const char *end() const noexcept { return p + n; }
+    [[nodiscard]] JUTIL_CI char *begin() noexcept { return p; }
+    [[nodiscard]] JUTIL_CI char *end() noexcept { return p + n; }
+    [[nodiscard]] JUTIL_CI const char *begin() const noexcept { return p; }
+    [[nodiscard]] JUTIL_CI const char *end() const noexcept { return p + n; }
+    [[nodiscard]] JUTIL_CI std::size_t size() const noexcept { return n; }
+    [[nodiscard]] JUTIL_CI char *data() noexcept { return p; }
+    [[nodiscard]] JUTIL_CI const char *data() const noexcept { return p; }
 };
 
 namespace detail
@@ -244,10 +247,10 @@ JUTIL_CI auto match(std::index_sequence<Is...> &&, const char *const s, auto &&f
             std::array<char, sizeof(load)> res;
             res.fill(-1);
             auto it = res.begin();
-            (..., ([&]<std::size_t... Js, std::size_t N>(string<std::index_sequence<Js...>, N>) {
+            (..., ([&]<std::size_t... Js>(std::index_sequence<Js...>) {
                  ((*it++ = (char)Js), ...);
                  ++it;
-             }(Ss)));
+             }(std::make_index_sequence<Ss.size()>{})));
             return std::bit_cast<decltype(load)>(res);
         }();
         JUTIL_dbge(puts("suf:"), print_bytes(load), print_bytes(msuf));
@@ -257,10 +260,10 @@ JUTIL_CI auto match(std::index_sequence<Is...> &&, const char *const s, auto &&f
             std::array<char, sizeof(load)> res;
             res.fill(0);
             auto it = res.begin();
-            (..., ([&]<std::size_t... Js, std::size_t N>(string<std::index_sequence<Js...>, N> s_) {
+            (..., ([&]<std::size_t... Js>(std::index_sequence<Js...>, const auto &s_) {
                  ((*it++ = s_[Js]), ...);
                  ++it;
-             }(Ss)));
+             }(std::make_index_sequence<Ss.size()>{}, Ss)));
             return std::bit_cast<decltype(load)>(res);
         }();
         JUTIL_dbge(puts("cmp:"), print_bytes(suf), print_bytes(bcmp));

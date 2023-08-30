@@ -88,7 +88,7 @@ struct argparse_t<Program, std::index_sequence<Is...>, command<Ss, Ls, Ns, Ds, F
 #define JUTIL_ap_p(Capture, Static, F, G)                                                          \
     return                                                                                         \
         [RMPARENS Capture](const int argc, const char *const argv[])                               \
-            RMPARENS Static noexcept(noexcept(G(F(), std::span<const char *const>{}))) NDBGSTMNT(  \
+            RMPARENS Static noexcept(noexcept(G(F(), std::span<const char *const>{}))) NDBGSTMT(   \
                 __attribute__((optimize("-Os")))) -> int {                                         \
                 int ret    = 0, i;                                                                 \
                 auto state = F();                                                                  \

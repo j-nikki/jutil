@@ -16,6 +16,18 @@ namespace sr = std::ranges;
 namespace sv = std::views;
 
 //
+// ipow
+//
+template <std::integral T>
+[[nodiscard]] JUTIL_CI T ipow(T x, std::size_t n) noexcept
+{
+    T res = 1;
+    while (n--)
+        res *= x;
+    return res;
+}
+
+//
 // call
 //
 template <callable<> F>

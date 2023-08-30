@@ -116,9 +116,9 @@ concept sized_contiguous_output_range =
 #define WSTRINGIFY(X) JUTIL_wstr_exp(X)
 
 #ifndef NDEBUG
-#define DBGEXPR(...)  __VA_ARGS__
-#define DBGSTMNT(...) __VA_ARGS__
-#define NDBGSTMNT(...)
+#define DBGEXPR(...) __VA_ARGS__
+#define DBGSTMT(...) __VA_ARGS__
+#define NDBGSTMT(...)
 #define JUTIL_UNREACHABLE()                                                                        \
     do {                                                                                           \
         __builtin_trap();                                                                          \
@@ -126,8 +126,8 @@ concept sized_contiguous_output_range =
     } while (0)
 #else
 #define DBGEXPR(...) ((void)0)
-#define DBGSTMNT(...)
-#define NDBGSTMNT(...) __VA_ARGS__
+#define DBGSTMT(...)
+#define NDBGSTMT(...) __VA_ARGS__
 #define JUTIL_UNREACHABLE()                                                                        \
     do {                                                                                           \
         [[assume(0)]];                                                                             \
@@ -137,12 +137,12 @@ concept sized_contiguous_output_range =
 #define JUTIL_NO_DEFAULT()                                                                         \
     default: JUTIL_UNREACHABLE()
 #ifdef _MSC_VER
-#define JUTIL_INLINE            inline NDBGSTMNT(__forceinline)
+#define JUTIL_INLINE            inline NDBGSTMT(__forceinline)
 #define JUTIL_NOINLINE          __declspec(noinline)
 #define JUTIL_NO_UNIQUE_ADDRESS [[no_unique_address]] [[msvc::no_unique_address]]
 #define JUTIL_TRAP()            __debugbreak()
 #else
-#define JUTIL_INLINE            inline NDBGSTMNT(__attribute__((always_inline)))
+#define JUTIL_INLINE            inline NDBGSTMT(__attribute__((always_inline)))
 #define JUTIL_NOINLINE          __attribute__((noinline))
 #define JUTIL_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #if defined(__GNUC__) || defined(__GNUG__)
@@ -221,8 +221,8 @@ JUTIL_CI std::conditional_t<F, T, U> &&if_(T &&t, U &&u) noexcept
         JUTIL_c_u_impl(E, 0, For __VA_OPT__(, __VA_ARGS__))))(E)
 #else
 #define DBGEXPR(...) ((void)0)
-#define DBGSTMNT(...)
-#define NDBGSTMNT(...) __VA_ARGS__
+#define DBGSTMT(...)
+#define NDBGSTMT(...) __VA_ARGS__
 #define JUTIL_c_impl(E, ...)                                                                       \
     [&]<class CAT(JaT, __LINE__)>(CAT(JaT, __LINE__) && CAT(jae, __LINE__)) -> CAT(JaT,            \
                                                                                    __LINE__) {     \
@@ -574,17 +574,24 @@ struct deferty {
 //
 // string
 //
-template <class, std::size_t>
-struct string;
-template <std::size_t... Is, std::size_t N>
-struct string<std::index_sequence<Is...>, N> : std::array<char, N> {
-    consteval string(const char (&cs)[N + 1]) noexcept : std::array<char, N>{cs[Is]...} {}
-    consteval string(const std::array<char, N> &cs) noexcept : std::array<char, N>{cs[Is]...} {}
+template <std::size_t N>
+struct string : std::array<char, N> {
+    consteval string(const char (&cs)[N + 1]) noexcept
+    {
+        for (auto i = 0uz; i < N; ++i)
+            (*this)[i] = cs[i];
+    }
+    consteval string(const std::array<char, N> &cs) noexcept
+    {
+        for (auto i = 0uz; i < N; ++i)
+            (*this)[i] = cs[i];
+    }
+    consteval const std::array<char, N> &array() const noexcept { return *this; }
 };
 template <std::size_t N>
-string(const char (&cs)[N]) -> string<std::make_index_sequence<N - 1>, N - 1>;
+string(const char (&cs)[N]) -> string<N - 1>;
 template <std::size_t N>
-string(const std::array<char, N> &arr) -> string<std::make_index_sequence<N>, N>;
+string(const std::array<char, N> &arr) -> string<N>;
 inline namespace literals
 {
 template <string S>
